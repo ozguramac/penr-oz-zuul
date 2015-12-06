@@ -1,6 +1,6 @@
 package com.oz.gateway.test;
 
-import com.oz.gateway.AuthServerApplication;
+import com.oz.gateway.GatewayApplication;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,16 +17,18 @@ import org.springframework.security.oauth2.client.token.grant.password.ResourceO
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.client.RestOperations;
 
-import java.security.Principal;
+import java.util.logging.Logger;
 
 /**
  * Created by Ozgur V. Amac on 12/4/15.
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = AuthServerApplication.class)
+@SpringApplicationConfiguration(classes = GatewayApplication.class)
 @WebIntegrationTest(randomPort = true)
-@OAuth2ContextConfiguration(ClientTestDetails.class)
-public class AuthClientTest implements RestTemplateHolder {
+@OAuth2ContextConfiguration(TestDetails.class)
+public class GatewayClientTest implements RestTemplateHolder {
+    private static final Logger log = Logger.getLogger(GatewayClientTest.class.getName());
+
     private RestOperations restOp = new TestRestTemplate();
 
     @Value("http://localhost:${local.server.port}")
@@ -51,15 +53,15 @@ public class AuthClientTest implements RestTemplateHolder {
 
     @Test
     public void testUserOAuth2() {
-        final ResponseEntity<?> re = getRestTemplate().getForEntity(host + "/user", String.class);
+        final ResponseEntity<String> re = getRestTemplate().getForEntity(host + "/user", String.class);
         Assert.assertTrue(re.getStatusCode().is2xxSuccessful());
-        System.out.println(re.getBody());
+        log.info(re.getBody());
     }
 }
 
-class ClientTestDetails extends ResourceOwnerPasswordResourceDetails {
-    public ClientTestDetails(final Object obj) {
-        final AuthClientTest act = (AuthClientTest) obj;
+class TestDetails extends ResourceOwnerPasswordResourceDetails {
+    public TestDetails(final Object obj) {
+        final GatewayClientTest act = (GatewayClientTest) obj;
         setAccessTokenUri(act.getHost() + "/oauth/token");
         setClientId("oz");
         setClientSecret("oursecret");
