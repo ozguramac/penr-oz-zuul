@@ -31,9 +31,10 @@ dependencies {
     compile "org.springframework.boot:spring-boot-starter:$version_spring_boot"
     compile "org.springframework.boot:spring-boot-starter-web:$version_spring_boot"
     compile "org.springframework.boot:spring-boot-starter-jetty:$version_spring_boot"
-    compile("org.springframework.boot:spring-boot-starter-actuator:$version_spring_boot")
-    compile("org.springframework.boot:spring-boot-starter-security:$version_spring_boot")
+    compile "org.springframework.boot:spring-boot-starter-actuator:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-security:$version_spring_boot"
     compile 'org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE'
+    compile 'org.springframework.cloud:spring-cloud-starter-zuul:1.0.3.RELEASE'
 
     testCompile 'junit:junit:4.11'
     testCompile 'org.springframework:spring-test:4.1.6.RELEASE'

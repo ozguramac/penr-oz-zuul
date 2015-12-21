@@ -65,7 +65,7 @@ class TestDetails extends ResourceOwnerPasswordResourceDetails {
         setAccessTokenUri(act.getHost() + "/oauth/token");
         setClientId("oz");
         setClientSecret("oursecret");
-        setUsername("user");
+        setUsername("svcAcct");
         setPassword("Welcome99");
     }
 }
