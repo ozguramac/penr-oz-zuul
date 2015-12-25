@@ -12,7 +12,6 @@ import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.codec.Base64;
-import org.springframework.security.oauth2.client.resource.BaseOAuth2ProtectedResourceDetails;
 import org.springframework.security.oauth2.client.resource.UserApprovalRequiredException;
 import org.springframework.security.oauth2.client.resource.UserRedirectRequiredException;
 import org.springframework.security.oauth2.client.test.OAuth2ContextConfiguration;
@@ -84,16 +83,13 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Test
     @OAuth2ContextConfiguration(resource = ImplicitResource.class, initialize = false)
     public void testWithImplicitResource() throws Exception {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization"
-                ,"Basic " + new String(Base64.encode("svcAcct:Welcome99".getBytes())));
-        context.getAccessTokenRequest().setHeaders(headers);
+        setTokenAuthHeaders();
 
         try {
             Assert.assertNotNull(context.getAccessToken());
             Assert.fail("Expected user redirect error");
         }
-        catch (UserRedirectRequiredException e) {
+        catch (UserRedirectRequiredException urre) {
             context.getAccessTokenRequest().add(OAuth2Utils.USER_OAUTH_APPROVAL, "true");
             context.getAccessTokenRequest().add("scope.read", "true");
 
@@ -106,10 +102,7 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Test
     @OAuth2ContextConfiguration(resource = AuthorizationCode.class, initialize = false)
     public void testWithAuthorizationCode() throws Exception {
-        final HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization"
-                ,"Basic " + new String(Base64.encode("svcAcct:Welcome99".getBytes())));
-        context.getAccessTokenRequest().setHeaders(headers);
+        setTokenAuthHeaders();
 
         try {
             Assert.assertNotNull(context.getAccessToken());
@@ -139,6 +132,13 @@ public class GatewayClientTest implements RestTemplateHolder {
                 assertUserApiAccess();
             }
         }
+    }
+
+    private void setTokenAuthHeaders() {
+        final HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization"
+                ,"Basic " + new String(Base64.encode("svcAcct:Welcome99".getBytes())));
+        context.getAccessTokenRequest().setHeaders(headers);
     }
 
     static class ResourceOwner extends ResourceOwnerPasswordResourceDetails {
