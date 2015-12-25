@@ -12,6 +12,8 @@ import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.codec.Base64;
+import org.springframework.security.oauth2.client.resource.BaseOAuth2ProtectedResourceDetails;
+import org.springframework.security.oauth2.client.resource.UserApprovalRequiredException;
 import org.springframework.security.oauth2.client.resource.UserRedirectRequiredException;
 import org.springframework.security.oauth2.client.test.OAuth2ContextConfiguration;
 import org.springframework.security.oauth2.client.test.OAuth2ContextSetup;
@@ -20,6 +22,7 @@ import org.springframework.security.oauth2.client.token.grant.client.ClientCrede
 import org.springframework.security.oauth2.client.token.grant.code.AuthorizationCodeResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.implicit.ImplicitResourceDetails;
 import org.springframework.security.oauth2.client.token.grant.password.ResourceOwnerPasswordResourceDetails;
+import org.springframework.security.oauth2.client.token.grant.redirect.AbstractRedirectResourceDetails;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.common.util.OAuth2Utils;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
@@ -74,6 +77,8 @@ public class GatewayClientTest implements RestTemplateHolder {
         final OAuth2AccessToken accessToken = context.getAccessToken();
         Assert.assertNotNull(accessToken);
         Assert.assertNull(accessToken.getRefreshToken());
+
+        assertUserApiAccess();
     }
 
     @Test
@@ -93,39 +98,45 @@ public class GatewayClientTest implements RestTemplateHolder {
             context.getAccessTokenRequest().add("scope.read", "true");
 
             Assert.assertNotNull(context.getAccessToken());
+
+            assertUserApiAccess();
         }
     }
 
     @Test
-    @OAuth2ContextConfiguration(AuthorizationCode.class)
+    @OAuth2ContextConfiguration(resource = AuthorizationCode.class, initialize = false)
     public void testWithAuthorizationCode() throws Exception {
         final HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization"
                 ,"Basic " + new String(Base64.encode("svcAcct:Welcome99".getBytes())));
         context.getAccessTokenRequest().setHeaders(headers);
 
-        context.getAccessTokenRequest().setCurrentUri("http://sunapee");
-
         try {
             Assert.assertNotNull(context.getAccessToken());
             Assert.fail("Expected user redirect error to obtain access token");
         }
-        catch (UserRedirectRequiredException e)
+        catch (UserRedirectRequiredException urre)
         {
+            Assert.assertTrue(urre.getRedirectUri().startsWith(
+                    ((AbstractRedirectResourceDetails)context.getResource()).getUserAuthorizationUri()));
             Assert.assertNull(context.getAccessTokenRequest().getAuthorizationCode());
 
             try {
                 Assert.assertNotNull(context.getAccessToken());
                 Assert.fail("Expected user redirect error for user approval");
             }
-            catch (UserRedirectRequiredException e2)
+            catch (UserApprovalRequiredException uare)
             {
+                Assert.assertTrue(uare.getApprovalUri().startsWith(
+                        ((AbstractRedirectResourceDetails)context.getResource()).getUserAuthorizationUri()));
                 Assert.assertNull(context.getAccessTokenRequest().getAuthorizationCode());
 
                 context.getAccessTokenRequest().add(OAuth2Utils.USER_OAUTH_APPROVAL, "true");
 
                 Assert.assertNotNull(context.getAccessToken());
                 Assert.assertNotNull(context.getAccessTokenRequest().getAuthorizationCode());
+
+                assertUserApiAccess();
             }
         }
     }
@@ -174,6 +185,10 @@ public class GatewayClientTest implements RestTemplateHolder {
 
     static class AuthorizationCode extends AuthorizationCodeResourceDetails {
         public AuthorizationCode(final Object target) {
+            final GatewayClientTest test = (GatewayClientTest) target;
+            setAccessTokenUri(test.host + "/oauth/token");
+            setUserAuthorizationUri(test.host + "/oauth/authorize");
+
             setClientId("oz-client-with-registered-redirect");
             setId(getClientId());
 
