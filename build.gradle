@@ -11,6 +11,8 @@ buildscript {
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:$version_spring_boot"
         classpath 'io.spring.gradle:dependency-management-plugin:0.5.4.RELEASE'
+        classpath 'org.liquibase:liquibase-gradle-plugin:1.1.1'
+        classpath "mysql:mysql-connector-java:$version_mysql_connector"
     }
 }
 
@@ -33,8 +35,13 @@ dependencies {
     compile "org.springframework.boot:spring-boot-starter-jetty:$version_spring_boot"
     compile "org.springframework.boot:spring-boot-starter-actuator:$version_spring_boot"
     compile "org.springframework.boot:spring-boot-starter-security:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-jdbc:$version_spring_boot"
+
     compile 'org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE'
+
     compile 'org.springframework.cloud:spring-cloud-starter-zuul:1.0.3.RELEASE'
+
+    compile "mysql:mysql-connector-java:$version_mysql_connector"
 
     testCompile 'junit:junit:4.11'
     testCompile 'org.springframework:spring-test:4.1.6.RELEASE'
@@ -43,4 +50,28 @@ dependencies {
 
 configurations {
     compile.exclude module: 'spring-boot-starter-tomcat'
+}
+
+apply plugin: 'org.liquibase.gradle'
+liquibase {
+    activities {
+        main {
+            changeLogFile 'db/master-db-changelog.xml'
+            url System.getProperty('db.url')
+            username System.getProperty('db.username')
+            password System.getProperty('db.password')
+            changeLogParameters([propertyFileWillOverride: 'true' ,
+                                 promptOnNonLocalDatabase: 'false'])
+        }
+    }
+    runList = 'main'
+}
+
+test {
+    systemProperties = [
+             "db.driver": System.getProperty('db.driver')
+            ,"db.url": System.getProperty('db.url')
+            ,"db.username": System.getProperty('db.username')
+            ,"db.password": System.getProperty('db.password')
+    ]
 }
