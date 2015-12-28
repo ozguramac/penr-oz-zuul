@@ -1,19 +1,21 @@
 package com.oz.gateway.test;
 
 import com.oz.gateway.GatewayApplication;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.TestRestTemplate;
 import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.codec.Base64;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.resource.UserApprovalRequiredException;
 import org.springframework.security.oauth2.client.resource.UserRedirectRequiredException;
+import org.springframework.security.oauth2.client.test.BeforeOAuth2Context;
 import org.springframework.security.oauth2.client.test.OAuth2ContextConfiguration;
 import org.springframework.security.oauth2.client.test.OAuth2ContextSetup;
 import org.springframework.security.oauth2.client.test.RestTemplateHolder;
@@ -27,6 +29,10 @@ import org.springframework.security.oauth2.common.util.OAuth2Utils;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.client.RestOperations;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -46,6 +52,120 @@ public class GatewayClientTest implements RestTemplateHolder {
 
     @Rule
     public OAuth2ContextSetup context = OAuth2ContextSetup.standard(this);
+
+    @Autowired
+    private DataSource dataSource;
+
+    private final String username = "svcAcct";
+    private final String password = "Welcome99";
+
+    @BeforeOAuth2Context
+    public void setupServiceAccount() throws Exception {
+        Connection conn = null;
+        try {
+            PreparedStatement stmt = null;
+            conn = dataSource.getConnection();
+
+            //Check if exists already
+            boolean bExists = false;
+            {ResultSet rs = null;
+                try {
+                    stmt = conn.prepareStatement("select 1 from users where username=?");
+                    stmt.setString(1, username);
+                    rs = stmt.executeQuery();
+                    bExists = (rs.next() && rs.getInt(1) == 1);
+                } finally {
+                    rs.close();
+                    stmt.close();
+                }
+            }
+
+            if (bExists)
+            {//Remove existing
+                try {
+                    stmt = conn.prepareStatement("delete from authorities where username=?");
+                    stmt.setString(1, username);
+                    stmt.execute();
+                } finally {
+                    stmt.close();
+                }
+
+                try {
+                    stmt = conn.prepareStatement("delete from users where username=?");
+                    stmt.setString(1, username);
+                    stmt.execute();
+                } finally {
+                    stmt.close();
+                }
+            }
+
+            //Create new one
+            try {
+                stmt = conn.prepareStatement("insert into users values(?,?,1)");
+                stmt.setString(1, username);
+                stmt.setString(2, new BCryptPasswordEncoder().encode(password));
+                stmt.execute();
+            } finally {
+                stmt.close();
+            }
+
+            for (String role : new String[]{"ROLE_CLIENT", "ROLE_TRUSTED_CLIENT"}) {
+                try {
+                    stmt = conn.prepareStatement("insert into authorities values(?,?)");
+                    stmt.setString(1, username);
+                    stmt.setString(2, role);
+                    stmt.execute();
+                } finally {
+                    stmt.close();
+                }
+            }
+        }
+        finally {
+            conn.close();
+        }
+
+        //TODO: Recreate clients config
+        /*
+                    .withClient("oz-trusted-client")
+                        .authorizedGrantTypes(
+                             "password"
+                            ,"authorization_code"
+                            ,"refresh_token"
+                            ,"implicit"
+                        )
+                        .authorities(
+                                 "ROLE_CLIENT"
+                                ,"ROLE_TRUSTED_CLIENT"
+                        )
+                        .scopes(
+                                 "read"
+                                ,"write"
+                                ,"trust"
+                        )
+                        .resourceIds("sunapee")
+                        .accessTokenValiditySeconds(60)
+                    .and()
+                    .withClient("oz-client-with-registered-redirect")
+                        .authorizedGrantTypes("authorization_code")
+                        .authorities("ROLE_CLIENT")
+                        .scopes(
+                                 "read"
+                                ,"trust"
+                        )
+                        .resourceIds("sunapee")
+                        .redirectUris("http://sunapee?key=value")
+                    .and()
+                    .withClient("oz-client-with-secret")
+                        .authorizedGrantTypes(
+                                 "client_credentials"
+                                ,"password"
+                        )
+                        .authorities("ROLE_CLIENT")
+                        .scopes("read")
+                        .resourceIds("sunapee")
+                        .secret("oursecret")
+         */
+    }
 
     @Override
     public void setRestTemplate(RestOperations restTemplate) {
@@ -136,8 +256,9 @@ public class GatewayClientTest implements RestTemplateHolder {
 
     private void setTokenAuthHeaders() {
         final HttpHeaders headers = new HttpHeaders();
+        final String userPswd = username+":"+password;
         headers.set("Authorization"
-                ,"Basic " + new String(Base64.encode("svcAcct:Welcome99".getBytes())));
+                ,"Basic " + new String(Base64.encode(userPswd.getBytes())));
         context.getAccessTokenRequest().setHeaders(headers);
     }
 
@@ -150,8 +271,8 @@ public class GatewayClientTest implements RestTemplateHolder {
             setId(getClientId());
             setClientSecret("oursecret");
 
-            setUsername("svcAcct");
-            setPassword("Welcome99");
+            setUsername(test.username);
+            setPassword(test.password);
 
             setScope(Arrays.asList("read"));
         }

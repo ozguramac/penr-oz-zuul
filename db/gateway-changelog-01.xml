@@ -33,7 +33,7 @@
             <column name="access_token_validity" type="INT"/>
             <column name="refresh_token_validity" type="INT"/>
             <column name="additional_information" type="VARCHAR(4096)"/>
-            <column name="autoapprove" type="TINYINT"/>
+            <column name="autoapprove" type="VARCHAR(255)"/>
         </createTable>
     </changeSet>
     <changeSet author="oz" id="1451110872677-3">
@@ -60,5 +60,32 @@
     </changeSet>
     <changeSet author="oz" id="1451110872677-6">
         <addPrimaryKey columnNames="client_id" constraintName="PRIMARY" tableName="oauth_client_details"/>
+    </changeSet>
+    <changeSet id="1451110872677-7" author="oz">
+        <createTable tableName="users">
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="TINYINT(1)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="users" columnNames="username" constraintName="PRIMARY"/>
+        <createTable tableName="authorities">
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="authority" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="FOREIGN"
+                                 baseTableName="authorities" baseColumnNames="username"
+                                 referencedTableName="users" referencedColumnNames="username"/>
+        <addUniqueConstraint constraintName="authorities_idx_1"
+                             tableName="authorities" columnNames="username,authority" />
     </changeSet>
 </databaseChangeLog>

@@ -59,11 +59,7 @@ public class GatewayApplication {
     public void configureGlobal(final AuthenticationManagerBuilder auth) throws Exception {
         auth.jdbcAuthentication()
                 .dataSource(dataSource)
-                .withDefaultSchema()
                 .passwordEncoder(passwordEncoder)
-                .withUser("svcAcct")
-                    .password("Welcome99")
-                    .roles("ADMIN")
         ;
     }
 
@@ -114,44 +110,6 @@ public class GatewayApplication {
         public void configure(final ClientDetailsServiceConfigurer clients) throws Exception {
             clients.jdbc(dataSource)
                     .passwordEncoder(passwordEncoder)
-                    .withClient("oz-trusted-client")
-                        .authorizedGrantTypes(
-                             "password"
-                            ,"authorization_code"
-                            ,"refresh_token"
-                            ,"implicit"
-                        )
-                        .authorities(
-                                 "ROLE_CLIENT"
-                                ,"ROLE_TRUSTED_CLIENT"
-                        )
-                        .scopes(
-                                 "read"
-                                ,"write"
-                                ,"trust"
-                        )
-                        .resourceIds("sunapee")
-                        .accessTokenValiditySeconds(60)
-                    .and()
-                    .withClient("oz-client-with-registered-redirect")
-                        .authorizedGrantTypes("authorization_code")
-                        .authorities("ROLE_CLIENT")
-                        .scopes(
-                                 "read"
-                                ,"trust"
-                        )
-                        .resourceIds("sunapee")
-                        .redirectUris("http://sunapee?key=value")
-                    .and()
-                    .withClient("oz-client-with-secret")
-                        .authorizedGrantTypes(
-                                 "client_credentials"
-                                ,"password"
-                        )
-                        .authorities("ROLE_CLIENT")
-                        .scopes("read")
-                        .resourceIds("sunapee")
-                        .secret("oursecret")
             ;
         }
     }
