@@ -33,6 +33,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -56,69 +57,21 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Autowired
     private DataSource dataSource;
 
-    private final String username = "svcAcct";
+    private final String anyUser = "anyUser";
+    private final String trustedUser = "trustedUser";
+    private final String svcAcct = "svcAcct";
     private final String password = "Welcome99";
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @BeforeOAuth2Context
-    public void setupServiceAccount() throws Exception {
+    public void setupTestData() throws Exception
+    {//TODO: Use spring objects to create data
         Connection conn = null;
         try {
-            PreparedStatement stmt = null;
             conn = dataSource.getConnection();
-
-            //Check if exists already
-            boolean bExists = false;
-            {ResultSet rs = null;
-                try {
-                    stmt = conn.prepareStatement("select 1 from users where username=?");
-                    stmt.setString(1, username);
-                    rs = stmt.executeQuery();
-                    bExists = (rs.next() && rs.getInt(1) == 1);
-                } finally {
-                    rs.close();
-                    stmt.close();
-                }
-            }
-
-            if (bExists)
-            {//Remove existing
-                try {
-                    stmt = conn.prepareStatement("delete from authorities where username=?");
-                    stmt.setString(1, username);
-                    stmt.execute();
-                } finally {
-                    stmt.close();
-                }
-
-                try {
-                    stmt = conn.prepareStatement("delete from users where username=?");
-                    stmt.setString(1, username);
-                    stmt.execute();
-                } finally {
-                    stmt.close();
-                }
-            }
-
-            //Create new one
-            try {
-                stmt = conn.prepareStatement("insert into users values(?,?,1)");
-                stmt.setString(1, username);
-                stmt.setString(2, new BCryptPasswordEncoder().encode(password));
-                stmt.execute();
-            } finally {
-                stmt.close();
-            }
-
-            for (String role : new String[]{"ROLE_CLIENT", "ROLE_TRUSTED_CLIENT"}) {
-                try {
-                    stmt = conn.prepareStatement("insert into authorities values(?,?)");
-                    stmt.setString(1, username);
-                    stmt.setString(2, role);
-                    stmt.execute();
-                } finally {
-                    stmt.close();
-                }
-            }
+            setupUser(conn, anyUser, "CLIENT");
+            setupUser(conn, trustedUser, "CLIENT", "TRUSTED_CLIENT");
+            setupUser(conn, svcAcct, "ADMIN");
         }
         finally {
             conn.close();
@@ -167,6 +120,66 @@ public class GatewayClientTest implements RestTemplateHolder {
          */
     }
 
+    private void setupUser(final Connection conn, final String username, final String... roles)
+            throws SQLException
+    {
+        PreparedStatement stmt = null;
+
+        //Check if exists already
+        boolean bExists = false;
+        {ResultSet rs = null;
+            try {
+                stmt = conn.prepareStatement("select 1 from users where username=?");
+                stmt.setString(1, username);
+                rs = stmt.executeQuery();
+                bExists = (rs.next() && rs.getInt(1) == 1);
+            } finally {
+                rs.close();
+                stmt.close();
+            }
+        }
+
+        if (bExists)
+        {//Remove existing
+            try {
+                stmt = conn.prepareStatement("delete from authorities where username=?");
+                stmt.setString(1, username);
+                stmt.execute();
+            } finally {
+                stmt.close();
+            }
+
+            try {
+                stmt = conn.prepareStatement("delete from users where username=?");
+                stmt.setString(1, username);
+                stmt.execute();
+            } finally {
+                stmt.close();
+            }
+        }
+
+        //Create new one
+        try {
+            stmt = conn.prepareStatement("insert into users values(?,?,1)");
+            stmt.setString(1, username);
+            stmt.setString(2, passwordEncoder.encode(password));
+            stmt.execute();
+        } finally {
+            stmt.close();
+        }
+
+        for (String role : roles) {
+            try {
+                stmt = conn.prepareStatement("insert into authorities values(?,?)");
+                stmt.setString(1, username);
+                stmt.setString(2, "ROLE_"+role);
+                stmt.execute();
+            } finally {
+                stmt.close();
+            }
+        }
+    }
+
     @Override
     public void setRestTemplate(RestOperations restTemplate) {
         restOp = restTemplate;
@@ -203,7 +216,7 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Test
     @OAuth2ContextConfiguration(resource = ImplicitResource.class, initialize = false)
     public void testWithImplicitResource() throws Exception {
-        setTokenAuthHeaders();
+        setTokenAuthHeaders(svcAcct);
 
         try {
             Assert.assertNotNull(context.getAccessToken());
@@ -222,7 +235,7 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Test
     @OAuth2ContextConfiguration(resource = AuthorizationCode.class, initialize = false)
     public void testWithAuthorizationCode() throws Exception {
-        setTokenAuthHeaders();
+        setTokenAuthHeaders(svcAcct);
 
         try {
             Assert.assertNotNull(context.getAccessToken());
@@ -254,7 +267,7 @@ public class GatewayClientTest implements RestTemplateHolder {
         }
     }
 
-    private void setTokenAuthHeaders() {
+    private void setTokenAuthHeaders(final String username) {
         final HttpHeaders headers = new HttpHeaders();
         final String userPswd = username+":"+password;
         headers.set("Authorization"
@@ -271,7 +284,7 @@ public class GatewayClientTest implements RestTemplateHolder {
             setId(getClientId());
             setClientSecret("oursecret");
 
-            setUsername(test.username);
+            setUsername(test.anyUser);
             setPassword(test.password);
 
             setScope(Arrays.asList("read"));
@@ -299,6 +312,8 @@ public class GatewayClientTest implements RestTemplateHolder {
 
             setClientId("oz-trusted-client");
             setId(getClientId());
+
+            setScope(Arrays.asList("read"));
 
             setPreEstablishedRedirectUri("http://sunapee");
         }
