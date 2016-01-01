@@ -58,10 +58,37 @@
             <column name="authentication" type="BLOB"/>
         </createTable>
     </changeSet>
-    <changeSet author="oz" id="1451110872677-6">
-        <addPrimaryKey columnNames="client_id" constraintName="PRIMARY" tableName="oauth_client_details"/>
+    <changeSet id="1451110872677-6" author="oz">
+        <createTable tableName="oauth_approvals">
+            <column name="userId" type="VARCHAR(255)"/>
+            <column name="clientId" type="VARCHAR(255)"/>
+            <column name="scope" type="VARCHAR(255)"/>
+            <column name="status" type="VARCHAR(10)"/>
+            <column name="expiresAt" type="TIMESTAMP"/>
+            <column name="lastModifiedAt" type="TIMESTAMP"/>
+        </createTable>
     </changeSet>
-    <changeSet id="1451110872677-7" author="oz">
+    <changeSet author="oz" id="1451110872677-7">
+        <addPrimaryKey constraintName="oauth_client_details_pk"
+                       tableName="oauth_client_details" columnNames="client_id" />
+        <addPrimaryKey constraintName="oauth_client_token_pk"
+                tableName="oauth_client_token" columnNames="authentication_id" />
+        <addForeignKeyConstraint constraintName="oauth_client_token_fk_1"
+                                 baseTableName="oauth_client_token" baseColumnNames="client_id"
+                                 referencedTableName="oauth_client_details" referencedColumnNames="client_id"
+                                 onDelete="CASCADE"/>
+        <addPrimaryKey constraintName="oauth_access_token_pk"
+                 tableName="oauth_access_token" columnNames="authentication_id" />
+        <addForeignKeyConstraint constraintName="oauth_access_token_fk_1"
+                                 baseTableName="oauth_access_token" baseColumnNames="client_id"
+                                 referencedTableName="oauth_client_details" referencedColumnNames="client_id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="oauth_approvals_fk_1"
+                                 baseTableName="oauth_approvals" baseColumnNames="clientId"
+                                 referencedTableName="oauth_client_details" referencedColumnNames="client_id"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+    <changeSet id="1451110872677-8" author="oz">
         <createTable tableName="users">
             <column name="username" type="VARCHAR(50)">
                 <constraints nullable="false"/>
@@ -73,7 +100,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addPrimaryKey tableName="users" columnNames="username" constraintName="PRIMARY"/>
+    </changeSet>
+    <changeSet id="1451110872677-9" author="oz">
         <createTable tableName="authorities">
             <column name="username" type="VARCHAR(50)">
                 <constraints nullable="false"/>
@@ -82,10 +110,15 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint constraintName="FOREIGN"
-                                 baseTableName="authorities" baseColumnNames="username"
-                                 referencedTableName="users" referencedColumnNames="username"/>
+    </changeSet>
+    <changeSet id="1451110872677-10" author="oz">
+        <addPrimaryKey constraintName="users_pk"
+                       tableName="users" columnNames="username" />
         <addUniqueConstraint constraintName="authorities_idx_1"
                              tableName="authorities" columnNames="username,authority" />
+        <addForeignKeyConstraint constraintName="authorities_fk_1"
+                                 baseTableName="authorities" baseColumnNames="username"
+                                 referencedTableName="users" referencedColumnNames="username"
+                                 onDelete="CASCADE"/>
     </changeSet>
 </databaseChangeLog>

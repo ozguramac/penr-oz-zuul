@@ -1,7 +1,9 @@
 package com.oz.gateway.test;
 
 import com.oz.gateway.GatewayApplication;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,13 +28,13 @@ import org.springframework.security.oauth2.client.token.grant.password.ResourceO
 import org.springframework.security.oauth2.client.token.grant.redirect.AbstractRedirectResourceDetails;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.security.oauth2.common.util.OAuth2Utils;
+import org.springframework.security.oauth2.config.annotation.builders.JdbcClientDetailsServiceBuilder;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.client.RestOperations;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -57,6 +59,11 @@ public class GatewayClientTest implements RestTemplateHolder {
     @Autowired
     private DataSource dataSource;
 
+    private final String clientWithSecret = "oz-client-with-secret";
+    private final String trustedClient = "oz-trusted-client";
+    private final String clientWithRedirect = "oz-client-with-registered-redirect";
+    private final String secret = "oursecret";
+
     private final String anyUser = "anyUser";
     private final String trustedUser = "trustedUser";
     private final String svcAcct = "svcAcct";
@@ -65,98 +72,108 @@ public class GatewayClientTest implements RestTemplateHolder {
 
     @BeforeOAuth2Context
     public void setupTestData() throws Exception
-    {//TODO: Use spring objects to create data
+    {//TODO: Use spring objects to recreate data
         Connection conn = null;
         try {
             conn = dataSource.getConnection();
+
+            PreparedStatement stmt = null;
+
+            for (final String username :
+                    new String[] {anyUser, trustedUser, svcAcct}) {
+                //Remove user data (relies on delete cascade)
+                try {
+                    stmt = conn.prepareStatement("delete from users where username=?");
+                    stmt.setString(1, username);
+                    stmt.execute();
+                } finally {
+                    if (stmt != null) {
+                        stmt.close();
+                    }
+                }
+            }
+
+            //Recreate user data
             setupUser(conn, anyUser, "CLIENT");
             setupUser(conn, trustedUser, "CLIENT", "TRUSTED_CLIENT");
             setupUser(conn, svcAcct, "ADMIN");
+
+            //Remove client data (relies on delete cascade)
+            for (final String clientId :
+                    new String[] { clientWithSecret, trustedClient, clientWithRedirect})
+            {
+                try {
+                    stmt = conn.prepareStatement("delete from oauth_client_details where client_id=?");
+                    stmt.setString(1, clientId);
+                    stmt.execute();
+                } finally {
+                    if (stmt != null) {
+                        stmt.close();
+                    }
+                }
+            }
         }
         finally {
-            conn.close();
+            if (conn != null) {
+                conn.close();
+            }
         }
 
-        //TODO: Recreate clients config
-        /*
-                    .withClient("oz-trusted-client")
-                        .authorizedGrantTypes(
-                             "password"
-                            ,"authorization_code"
-                            ,"refresh_token"
-                            ,"implicit"
-                        )
-                        .authorities(
-                                 "ROLE_CLIENT"
-                                ,"ROLE_TRUSTED_CLIENT"
-                        )
-                        .scopes(
-                                 "read"
-                                ,"write"
-                                ,"trust"
-                        )
-                        .resourceIds("sunapee")
-                        .accessTokenValiditySeconds(60)
-                    .and()
-                    .withClient("oz-client-with-registered-redirect")
-                        .authorizedGrantTypes("authorization_code")
-                        .authorities("ROLE_CLIENT")
-                        .scopes(
-                                 "read"
-                                ,"trust"
-                        )
-                        .resourceIds("sunapee")
-                        .redirectUris("http://sunapee?key=value")
-                    .and()
-                    .withClient("oz-client-with-secret")
-                        .authorizedGrantTypes(
-                                 "client_credentials"
-                                ,"password"
-                        )
-                        .authorities("ROLE_CLIENT")
-                        .scopes("read")
-                        .resourceIds("sunapee")
-                        .secret("oursecret")
-         */
+        //Recreate clients config
+        final JdbcClientDetailsServiceBuilder clientBuilder =
+                new JdbcClientDetailsServiceBuilder()
+                .dataSource(dataSource)
+                .passwordEncoder(passwordEncoder)
+        ;
+
+        clientBuilder
+            .withClient(trustedClient)
+                .authorizedGrantTypes(
+                     "password"
+                    ,"authorization_code"
+                    ,"refresh_token"
+                    ,"implicit"
+                )
+                .authorities(
+                         "ROLE_CLIENT"
+                        ,"ROLE_TRUSTED_CLIENT"
+                )
+                .scopes(
+                         "read"
+                        ,"write"
+                        ,"trust"
+                )
+                .resourceIds("sunapee")
+                .accessTokenValiditySeconds(60)
+            .and()
+            .withClient(clientWithRedirect)
+                .authorizedGrantTypes("authorization_code")
+                .authorities("ROLE_CLIENT")
+                .scopes(
+                         "read"
+                        ,"trust"
+                )
+                .resourceIds("sunapee")
+                .redirectUris("http://sunapee?key=value")
+            .and()
+            .withClient(clientWithSecret)
+                .authorizedGrantTypes(
+                         "client_credentials"
+                        ,"password"
+                )
+                .authorities("ROLE_CLIENT")
+                .scopes("read")
+                .resourceIds("sunapee")
+                .secret(secret)
+        ;
+
+        clientBuilder.build();
     }
 
     private void setupUser(final Connection conn, final String username, final String... roles)
             throws SQLException
     {
         PreparedStatement stmt = null;
-
-        //Check if exists already
-        boolean bExists = false;
-        {ResultSet rs = null;
-            try {
-                stmt = conn.prepareStatement("select 1 from users where username=?");
-                stmt.setString(1, username);
-                rs = stmt.executeQuery();
-                bExists = (rs.next() && rs.getInt(1) == 1);
-            } finally {
-                rs.close();
-                stmt.close();
-            }
-        }
-
-        if (bExists)
-        {//Remove existing
-            try {
-                stmt = conn.prepareStatement("delete from authorities where username=?");
-                stmt.setString(1, username);
-                stmt.execute();
-            } finally {
-                stmt.close();
-            }
-
-            try {
-                stmt = conn.prepareStatement("delete from users where username=?");
-                stmt.setString(1, username);
-                stmt.execute();
-            } finally {
-                stmt.close();
-            }
-        }
 
         //Create new one
         try {
@@ -280,9 +297,9 @@ public class GatewayClientTest implements RestTemplateHolder {
             final GatewayClientTest test = (GatewayClientTest) target;
             setAccessTokenUri(test.host + "/oauth/token");
 
-            setClientId("oz-client-with-secret");
+            setClientId(test.clientWithSecret);
             setId(getClientId());
-            setClientSecret("oursecret");
+            setClientSecret(test.secret);
 
             setUsername(test.anyUser);
             setPassword(test.password);
@@ -296,9 +313,9 @@ public class GatewayClientTest implements RestTemplateHolder {
             final GatewayClientTest test = (GatewayClientTest) target;
             setAccessTokenUri(test.host + "/oauth/token");
 
-            setClientId("oz-client-with-secret");
+            setClientId(test.clientWithSecret);
             setId(getClientId());
-            setClientSecret("oursecret");
+            setClientSecret(test.secret);
 
             setScope(Arrays.asList("read"));
         }
@@ -310,7 +327,7 @@ public class GatewayClientTest implements RestTemplateHolder {
             setAccessTokenUri(test.host + "/oauth/authorize");
             setUserAuthorizationUri(test.host + "/oauth/authorize");
 
-            setClientId("oz-trusted-client");
+            setClientId(test.trustedClient);
             setId(getClientId());
 
             setScope(Arrays.asList("read"));
@@ -325,7 +342,7 @@ public class GatewayClientTest implements RestTemplateHolder {
             setAccessTokenUri(test.host + "/oauth/token");
             setUserAuthorizationUri(test.host + "/oauth/authorize");
 
-            setClientId("oz-client-with-registered-redirect");
+            setClientId(test.clientWithRedirect);
             setId(getClientId());
 
             setScope(Arrays.asList("read"));
