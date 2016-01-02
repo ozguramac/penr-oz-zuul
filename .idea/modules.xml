@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/gateway.iml" filepath="$PROJECT_DIR$/gateway.iml" />
+      <module fileurl="file://$PROJECT_DIR$/penr-oz-stairs.iml" filepath="$PROJECT_DIR$/penr-oz-stairs.iml" />
     </modules>
   </component>
 </project>
