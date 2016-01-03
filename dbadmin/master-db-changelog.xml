@@ -2,5 +2,7 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <include file="db/gateway-changelog-01.xml"/>
+    <include file="oauth2-changelog-01.xml"/>
+    <include file="auth-changelog-01.xml"/>
+    <include file="gateway-changelog-01.xml"/>
 </databaseChangeLog>

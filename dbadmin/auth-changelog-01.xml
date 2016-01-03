@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+         http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+         http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd
+        "
+>
+    <changeSet id="1451110872677-8" author="oz">
+        <createTable tableName="users">
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enabled" type="TINYINT(1)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1451110872677-9" author="oz">
+        <createTable tableName="authorities">
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="authority" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="1451110872677-10" author="oz">
+        <addPrimaryKey constraintName="users_pk"
+                       tableName="users" columnNames="username" />
+        <addUniqueConstraint constraintName="authorities_idx_1"
+                             tableName="authorities" columnNames="username,authority" />
+        <addForeignKeyConstraint constraintName="authorities_fk_1"
+                                 baseTableName="authorities" baseColumnNames="username"
+                                 referencedTableName="users" referencedColumnNames="username"
+                                 onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

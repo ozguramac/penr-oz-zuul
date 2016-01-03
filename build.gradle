@@ -1,77 +1,97 @@
-group 'com.oz'
-version '0.0.1-SNAPSHOT'
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.6'
+}
 
-apply plugin: 'spring-boot'
-apply plugin: 'io.spring.dependency-management'
+allprojects {
+    apply plugin: 'idea'
 
-buildscript {
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+    }
+
     repositories {
         mavenCentral()
     }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:$version_spring_boot"
-        classpath 'io.spring.gradle:dependency-management-plugin:0.5.4.RELEASE'
-        classpath 'org.liquibase:liquibase-gradle-plugin:1.1.1'
-        classpath "mysql:mysql-connector-java:$version_mysql_connector"
+}
+
+ext.versionFile = file('version.properties')
+
+task loadVersion {
+    def baseVersion = readVersion()
+    allprojects {
+        version = baseVersion
     }
 }
 
-apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+ProjectVersion readVersion() {
+    logger.quiet 'Reading the version file.'
 
-apply plugin: 'war'
-war {
-    baseName = 'gateway'
+    if (!versionFile.exists()) {
+        throw new GradleException("Required version file does not exit: $versionFile.canonicalPath")
+    }
+
+    Properties versionProps = new Properties()
+
+    versionFile.withInputStream { stream ->
+        versionProps.load(stream)
+    }
+
+    new ProjectVersion(versionProps.major.toInteger(), versionProps.minor.toInteger(), versionProps.patch.toInteger(), versionProps.release.toBoolean())
 }
 
-repositories {
-    mavenCentral()
+task makeReleaseVersion(group: 'versioning', description: 'Makes project a release version.') << {
+    version.release = true
+    ant.propertyfile(file: versionFile) {
+        entry(key: 'release', type: 'string', operation: '=', value: 'true')
+    }
 }
 
-dependencies {
-    compile "org.springframework.boot:spring-boot-starter:$version_spring_boot"
-    compile "org.springframework.boot:spring-boot-starter-web:$version_spring_boot"
-    compile "org.springframework.boot:spring-boot-starter-jetty:$version_spring_boot"
-    compile "org.springframework.boot:spring-boot-starter-actuator:$version_spring_boot"
-    compile "org.springframework.boot:spring-boot-starter-security:$version_spring_boot"
-    compile "org.springframework.boot:spring-boot-starter-jdbc:$version_spring_boot"
+tasks.addRule("Pattern: increment<Classifier>Version – Increments the project version classifier.") { String taskName ->
+    if (taskName.startsWith('increment') && taskName.endsWith('Version')) {
+        task(taskName) << {
+            String classifier = (taskName - 'increment' - 'Version').toLowerCase()
+            String currentVersion = version.toString()
 
-    compile 'org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE'
+            switch (classifier) {
+                case 'major': ++version.major
+                    break
+                case 'minor': ++version.minor
+                    break
+                case 'patch': ++version.patch
+                    break
+                default: throw new GradleException("Invalid version type '$classifier. Allowed types: ['Major', 'Minor', 'Patch']")
+            }
 
-    compile 'org.springframework.cloud:spring-cloud-starter-zuul:1.0.3.RELEASE'
+            String newVersion = version.toString()
+            logger.info "Incrementing $classifier project version: $currentVersion -> $newVersion"
 
-    compile "mysql:mysql-connector-java:$version_mysql_connector"
-
-    testCompile 'junit:junit:4.11'
-    testCompile 'org.springframework:spring-test:4.1.6.RELEASE'
-
-}
-
-configurations {
-    compile.exclude module: 'spring-boot-starter-tomcat'
-}
-
-apply plugin: 'org.liquibase.gradle'
-liquibase {
-    activities {
-        main {
-            changeLogFile 'db/master-db-changelog.xml'
-            url System.getProperty('db.url')
-            username System.getProperty('db.username')
-            password System.getProperty('db.password')
-            changeLogParameters([propertyFileWillOverride: 'true' ,
-                                 promptOnNonLocalDatabase: 'false'])
+            ant.propertyfile(file: versionFile) {
+                entry(key: classifier, type: 'int', operation: '+', value: 1)
+            }
         }
     }
-    runList = 'main'
 }
 
-test {
-    systemProperties = [
-             "db.driver": System.getProperty('db.driver')
-            ,"db.url": System.getProperty('db.url')
-            ,"db.username": System.getProperty('db.username')
-            ,"db.password": System.getProperty('db.password')
-    ]
+class ProjectVersion {
+    Integer major
+    Integer minor
+    Integer patch
+    Boolean release
+
+    ProjectVersion(Integer major, Integer minor, Integer patch) {
+        this.major = major
+        this.minor = minor
+        this.patch = patch
+        this.release = Boolean.FALSE
+    }
+
+    ProjectVersion(Integer major, Integer minor, Integer patch, Boolean release) {
+        this(major, minor, patch)
+        this.release = release
+    }
+
+    @Override
+    String toString() {
+        "$major.$minor.$patch${release ? '' : '-SNAPSHOT'}"
+    }
 }
