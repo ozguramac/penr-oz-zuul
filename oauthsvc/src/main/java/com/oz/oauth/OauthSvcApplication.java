@@ -64,13 +64,11 @@ public class OauthSvcApplication {
         @Autowired
         private PasswordEncoder passwordEncoder;
 
-        @Bean
-        public TokenStore tokenStore() {
+        private TokenStore tokenStore() {
             return new JdbcTokenStore(dataSource);
         }
 
-        @Bean
-        protected AuthorizationCodeServices authorizationCodeServices() {
+        private AuthorizationCodeServices authorizationCodeServices() {
             return new JdbcAuthorizationCodeServices(dataSource);
         }
 
