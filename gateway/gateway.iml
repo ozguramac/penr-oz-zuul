@@ -138,5 +138,6 @@
     <orderEntry type="library" name="Gradle: org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE" level="project" />
     <orderEntry type="library" name="Gradle: org.codehaus.jackson:jackson-core-asl:1.9.13" level="project" />
     <orderEntry type="library" name="Gradle: org.codehaus.jackson:jackson-mapper-asl:1.9.13" level="project" />
+    <orderEntry type="library" scope="TEST" name="Gradle: org.mockito:mockito-all:1.10.19" level="project" />
   </component>
 </module>

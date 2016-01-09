@@ -16,6 +16,8 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.R
 import org.springframework.security.oauth2.config.annotation.web.configurers.ResourceServerSecurityConfigurer;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.JdbcTokenStore;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
 
@@ -23,9 +25,16 @@ import javax.sql.DataSource;
  * Created by Ozgur V. Amac on 12/1/15.
  */
 @SpringBootApplication
+@RestController
 @EnableGlobalMethodSecurity(securedEnabled = true)
 @EnableZuulProxy
 public class GatewayApplication {
+
+    @RequestMapping("/")
+    String home() {
+        return "Welcome Home!";
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(GatewayApplication.class, args);
     }
@@ -64,10 +73,11 @@ public class GatewayApplication {
             http
                     .requestMatchers()
                         .antMatchers("/")
-                    .and()
-                    .authorizeRequests()
+                        .and()
+                        .authorizeRequests()
                         .anyRequest()
-                        .access("#oauth2.hasScope('read')");
+                        .authenticated()
+                        ;
         }
 
         @Override

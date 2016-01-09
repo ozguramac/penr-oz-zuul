@@ -40,6 +40,7 @@ dependencies {
     compile "mysql:mysql-connector-java:$version_mysql_connector"
 
     testCompile 'junit:junit:4.11'
+    testCompile 'org.mockito:mockito-all:1.10.19'
     testCompile 'org.springframework:spring-test:4.1.6.RELEASE'
 
 }
