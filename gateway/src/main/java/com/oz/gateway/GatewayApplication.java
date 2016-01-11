@@ -72,7 +72,7 @@ public class GatewayApplication {
         public void configure(final HttpSecurity http) throws Exception {
             http
                     .requestMatchers()
-                        .antMatchers("/")
+                        .antMatchers("/**")
                         .and()
                         .authorizeRequests()
                         .anyRequest()

@@ -197,18 +197,17 @@ public class GatewayClientTest {
         }
     }
 
-    private void assertApiAccess() {
-        //TODO: Try out zuul routing
-        final ResponseEntity<String> re = restOp.getForEntity(host + "/", String.class);
+    private void assertApiAccess(final String url) {
+        final ResponseEntity<String> re = restOp.getForEntity(url, String.class);
         Assert.assertTrue(re.getStatusCode().is2xxSuccessful());
         log.info(re.getBody());
 
     }
 
     @Test
-    public void testRoutingToSunapee() throws Exception {
+    public void testAuthenticated() throws Exception {
         restOp.getOAuth2ClientContext().setAccessToken(token);
-        assertApiAccess();
+        assertApiAccess(host + "/users");
     }
 }
 
