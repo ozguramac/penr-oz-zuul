@@ -7,7 +7,7 @@ References:
 
 Functional Requirements:
 
-The API gateway has to roles: routing, identity check, and policy enforcement.
+The API gateway has multiple roles: routing, identity check and invoke plugins, such as policy enforcement and auditing.
 
 Backend APIs belong to respective applications. They need to be registered to the gateway by the administrator from
 the admin website. The gateway uses the registration data store to route requests from external clients to backend
