@@ -48,12 +48,3 @@ dependencies {
 configurations {
     compile.exclude module: 'spring-boot-starter-tomcat'
 }
-
-test {
-    systemProperties = [
-            "db.driver": System.getProperty('db.driver')
-            ,"db.url": System.getProperty('db.url')
-            ,"db.username": System.getProperty('db.username')
-            ,"db.password": System.getProperty('db.password')
-    ]
-}
