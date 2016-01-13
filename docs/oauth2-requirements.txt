@@ -8,7 +8,7 @@ Functional Requirements:
 1. Support 3 modes: authorization code, implicit and client credentials.
 2. Use IDP as the authentication provider: authorization server will redirect the user to IDP login page
 3. Consolidate the db schema with iamsvc db schema to use the same user table, so that role/permission based access
-   control can be enforced within the policy server (a plugin with gateway)
+   control can be enforced within the policy server (a plugin for the gateway)
 4. Oauth2 client registration at the admin console
 5. Revoke a token by admin for immediate session termination
 
