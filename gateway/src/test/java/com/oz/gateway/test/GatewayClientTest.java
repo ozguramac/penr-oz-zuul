@@ -33,7 +33,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -62,9 +61,13 @@ public class GatewayClientTest {
     private final String clientWithSecret = "oz-client-with-secret";
     private final String secret = "oursecret";
 
-    private final String svcAcct = "svcAcct";
-    private final String password = "Welcome99";
-    private final String[] roles = { "ADMIN" };
+    @Value("${security.user.name}")
+    private String svcAcct;
+    @Value("${security.user.password}")
+    private String password;
+    @Value("${security.user.role}")
+    private String role;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private OAuth2AccessToken token;
@@ -83,23 +86,6 @@ public class GatewayClientTest {
             conn = dataSource.getConnection();
 
             PreparedStatement stmt = null;
-
-            for (final String username :
-                    new String[] { svcAcct }) {
-                //Remove user data (relies on delete cascade)
-                try {
-                    stmt = conn.prepareStatement("delete from users where username=?");
-                    stmt.setString(1, username);
-                    stmt.execute();
-                } finally {
-                    if (stmt != null) {
-                        stmt.close();
-                    }
-                }
-            }
-
-            //Recreate user data
-            setupUser(conn, svcAcct, roles);
 
             //Remove client data (relies on delete cascade)
             for (final String clientId :
@@ -141,6 +127,7 @@ public class GatewayClientTest {
         final ClientDetailsService clientDetailsService = clientDetailsServiceBuilder.build();
 
         //Add prepared access token for testing
+        final String[] roles = { role };
         final Collection<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
         for (String role : roles) {
             authorities.add(new SimpleGrantedAuthority(role));
@@ -170,33 +157,6 @@ public class GatewayClientTest {
         restOp = new OAuth2RestTemplate(resource);
     }
 
-    private void setupUser(final Connection conn, final String username, final String... roles)
-            throws SQLException
-    {
-        PreparedStatement stmt = null;
-
-        //Create new one
-        try {
-            stmt = conn.prepareStatement("insert into users values(?,?,1)");
-            stmt.setString(1, username);
-            stmt.setString(2, passwordEncoder.encode(password));
-            stmt.execute();
-        } finally {
-            stmt.close();
-        }
-
-        for (String role : roles) {
-            try {
-                stmt = conn.prepareStatement("insert into authorities values(?,?)");
-                stmt.setString(1, username);
-                stmt.setString(2, "ROLE_"+role);
-                stmt.execute();
-            } finally {
-                stmt.close();
-            }
-        }
-    }
-
     private void assertApiAccess(final String url) {
         final ResponseEntity<String> re = restOp.getForEntity(url, String.class);
         Assert.assertTrue(re.getStatusCode().is2xxSuccessful());
@@ -206,6 +166,12 @@ public class GatewayClientTest {
 
     @Test
     public void testAuthenticated() throws Exception {
+        restOp.getOAuth2ClientContext().setAccessToken(token);
+        assertApiAccess(host + "/");
+    }
+
+    @Test
+    public void testAuthenticatedRouting() throws Exception {
         restOp.getOAuth2ClientContext().setAccessToken(token);
         assertApiAccess(host + "/users");
     }

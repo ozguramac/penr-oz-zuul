@@ -11,7 +11,6 @@ import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.TestRestTemplate;
 import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.codec.Base64;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,7 +34,6 @@ import org.springframework.web.client.RestOperations;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -64,10 +62,14 @@ public class OauthClientTest implements RestTemplateHolder {
     private final String clientWithRedirect = "oz-client-with-registered-redirect";
     private final String secret = "oursecret";
 
-    private final String anyUser = "anyUser";
-    private final String trustedUser = "trustedUser";
-    private final String svcAcct = "svcAcct";
-    private final String password = "Welcome99";
+    //private final String anyUser = "anyUser";
+    //private final String trustedUser = "trustedUser";
+
+    @Value("${security.user.name}")
+    private String svcAcct;
+    @Value("${security.user.password}")
+    private String password;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @BeforeOAuth2Context
@@ -78,25 +80,6 @@ public class OauthClientTest implements RestTemplateHolder {
             conn = dataSource.getConnection();
 
             PreparedStatement stmt = null;
-
-            for (final String username :
-                    new String[] {anyUser, trustedUser, svcAcct}) {
-                //Remove user data (relies on delete cascade)
-                try {
-                    stmt = conn.prepareStatement("delete from users where username=?");
-                    stmt.setString(1, username);
-                    stmt.execute();
-                } finally {
-                    if (stmt != null) {
-                        stmt.close();
-                    }
-                }
-            }
-
-            //Recreate user data
-            setupUser(conn, anyUser, "CLIENT");
-            setupUser(conn, trustedUser, "CLIENT", "TRUSTED_CLIENT");
-            setupUser(conn, svcAcct, "ADMIN");
 
             //Remove client data (relies on delete cascade)
             for (final String clientId :
@@ -168,33 +151,6 @@ public class OauthClientTest implements RestTemplateHolder {
         ;
 
         clientBuilder.build();
-    }
-
-    private void setupUser(final Connection conn, final String username, final String... roles)
-            throws SQLException
-    {
-        PreparedStatement stmt = null;
-
-        //Create new one
-        try {
-            stmt = conn.prepareStatement("insert into users values(?,?,1)");
-            stmt.setString(1, username);
-            stmt.setString(2, passwordEncoder.encode(password));
-            stmt.execute();
-        } finally {
-            stmt.close();
-        }
-
-        for (String role : roles) {
-            try {
-                stmt = conn.prepareStatement("insert into authorities values(?,?)");
-                stmt.setString(1, username);
-                stmt.setString(2, "ROLE_"+role);
-                stmt.execute();
-            } finally {
-                stmt.close();
-            }
-        }
     }
 
     @Override
@@ -301,7 +257,7 @@ public class OauthClientTest implements RestTemplateHolder {
             setId(getClientId());
             setClientSecret(test.secret);
 
-            setUsername(test.anyUser);
+            setUsername(test.svcAcct);
             setPassword(test.password);
 
             setScope(Arrays.asList("read"));
