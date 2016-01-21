@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.SpringApplicationConfiguration;
 import org.springframework.boot.test.WebIntegrationTest;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -158,7 +158,11 @@ public class GatewayClientTest {
     }
 
     private void assertApiAccess(final String url) {
-        final ResponseEntity<String> re = restOp.getForEntity(url, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.add("ACTOR_USERNAME", "admin");
+        HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+        final ResponseEntity<String> re = restOp.exchange(url, HttpMethod.GET, httpEntity, String.class);
         Assert.assertTrue(re.getStatusCode().is2xxSuccessful());
         log.info(re.getBody());
 
@@ -173,7 +177,7 @@ public class GatewayClientTest {
     @Test
     public void testAuthenticatedRouting() throws Exception {
         restOp.getOAuth2ClientContext().setAccessToken(token);
-        assertApiAccess(host + "/users");
+        assertApiAccess(host + "/iamsvc/users");
     }
 }
 
