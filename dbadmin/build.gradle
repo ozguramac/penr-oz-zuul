@@ -1,0 +1,31 @@
+group 'com.oz'
+version '0.0.1-SNAPSHOT'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.liquibase:liquibase-gradle-plugin:1.1.1'
+        classpath "mysql:mysql-connector-java:$version_mysql_connector"
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'org.liquibase.gradle'
+liquibase {
+    activities {
+        main {
+            changeLogFile 'master-db-changelog.xml'
+            url System.getProperty('db.url')
+            username System.getProperty('db.username')
+            password System.getProperty('db.password')
+            changeLogParameters([propertyFileWillOverride: 'true' ,
+                                 promptOnNonLocalDatabase: 'false'])
+        }
+    }
+    runList = 'main'
+}

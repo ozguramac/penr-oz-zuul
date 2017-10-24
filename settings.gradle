@@ -1,0 +1,5 @@
+rootProject.name = 'penr-oz-stairs'
+include 'gateway'
+include 'dbadmin'
+include 'oauthsvc'
+

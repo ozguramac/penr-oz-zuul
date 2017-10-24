@@ -1,0 +1,43 @@
+References:
+
+1. docs/components.jpg in sunapee repo.
+2. Layer7 API gateway
+3. ForgeRock OpenIG
+4. docs/db-sketch.jpg in sunapee repo
+
+Functional Requirements:
+
+The API gateway has multiple roles: routing, identity check and invoke plugins, such as policy enforcement and auditing.
+
+Backend APIs belong to respective applications. They need to be registered to the gateway by the administrator from
+the admin website. The gateway uses the registration data store to route requests from external clients to backend
+APIs. The backend APIs are not limited to REST, SOAP and RPC, but the priority order is REST, SOAP, RPC and others.
+API discovery is desired, but not required immediately.
+
+The gateway verifies token (Oauth2 access token or java web token) in the request to identify the principal (end user or
+service account ). It passes the principal in the HTTP header to the backend APIs.  Supported protocols are OpenID
+Connect, OAuth2 and JWT. When Oauth2 is used, the gateway acts as a resource server.
+
+Policy server can be plugged in the gateway. There are several aspects about policy enforcement. At this layer,
+the policy server can execute role/permission based access control. beyond that, the policy server can inspect
+ data content in the request/response, filter data based on predefined user attributes, deny request based on
+existing user behavior pattern (api intrusion detection)
+
+Logging and Auditing are ligh wight features that can be plugged into the gateway.
+
+
+Execution Plan:
+
+First phase:
+    1. routing
+    2. oauth2 integration
+    3. design for API intrusion detection for the policy server
+Second phase:
+    1. ui based registration
+    2. role/permission based access control
+Third phase:
+    1. JWT and OpenID Connect
+    2. data filtering
+Forth phase:
+    1. API intrusion detection implmentation
+    2. the remainings

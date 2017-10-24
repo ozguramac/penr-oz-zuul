@@ -1,0 +1,50 @@
+apply plugin: 'spring-boot'
+apply plugin: 'io.spring.dependency-management'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$version_spring_boot"
+        classpath 'io.spring.gradle:dependency-management-plugin:0.5.4.RELEASE'
+        classpath "mysql:mysql-connector-java:$version_mysql_connector"
+    }
+}
+
+apply plugin: 'java'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+apply plugin: 'war'
+war {
+    baseName = 'gateway'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.springframework.boot:spring-boot-starter:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-web:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-jetty:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-actuator:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-security:$version_spring_boot"
+    compile "org.springframework.boot:spring-boot-starter-jdbc:$version_spring_boot"
+
+    compile 'org.springframework.security.oauth:spring-security-oauth2:2.0.7.RELEASE'
+
+    compile 'org.springframework.cloud:spring-cloud-starter-zuul:1.0.3.RELEASE'
+
+    compile "mysql:mysql-connector-java:$version_mysql_connector"
+
+    testCompile 'junit:junit:4.11'
+    testCompile 'org.mockito:mockito-all:1.10.19'
+    testCompile 'org.springframework:spring-test:4.1.6.RELEASE'
+
+}
+
+configurations {
+    compile.exclude module: 'spring-boot-starter-tomcat'
+}
