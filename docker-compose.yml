@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  oauthsvc:
+    container_name: oauthsvc
+    build: ./oauthsvc
+    ports:
+    - "8081:80"
+    - "8181:8181"
+    environment:
+      JAVA_OPTS: -Xdebug -Xmx256m -Xms256m -Xrunjdwp:server=y,transport=dt_socket,address=8181,suspend=n
+    entrypoint: java $JAVA_OPTS -jar /app.jar
+  gateway:
+    container_name: gateway
+    build: ./gateway
+    ports:
+    - "8090:80"
+    - "8190:8190"
+    environment:
+      JAVA_OPTS: -Xdebug -Xmx256m -Xms256m -Xrunjdwp:server=y,transport=dt_socket,address=8190,suspend=n
+    entrypoint: java $JAVA_OPTS -jar /app.jar

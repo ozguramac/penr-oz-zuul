@@ -1,4 +1,4 @@
-rootProject.name = 'penr-oz-stairs'
+rootProject.name = 'penr-oz-zuul'
 include 'gateway'
 include 'dbadmin'
 include 'oauthsvc'

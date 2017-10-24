@@ -16,16 +16,28 @@ buildscript {
 }
 
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-apply plugin: 'war'
-war {
+jar {
     baseName = 'oauthsvc'
 }
 
 repositories {
     mavenCentral()
+}
+
+
+sourceSets {
+    itest {
+        java.srcDir file('src/itest/java')
+        resources.srcDir file('src/main/resources')
+
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+    }
+}
+
+configurations {
+    itestCompile.extendsFrom testCompile
+    itestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -41,10 +53,16 @@ dependencies {
     compile "mysql:mysql-connector-java:$version_mysql_connector"
 
     testCompile 'junit:junit:4.11'
+    testCompile 'org.mockito:mockito-all:1.10.19'
     testCompile 'org.springframework:spring-test:4.1.6.RELEASE'
-
 }
 
 configurations {
     compile.exclude module: 'spring-boot-starter-tomcat'
+}
+
+task itest (type:Test) {
+    testClassesDir = sourceSets.itest.output.classesDir
+    classpath = sourceSets.itest.runtimeClasspath
+    outputs.upToDateWhen { false }
 }

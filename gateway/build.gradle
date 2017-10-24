@@ -1,3 +1,6 @@
+group 'com.oz'
+version '0.0.1-SNAPSHOT'
+
 apply plugin: 'spring-boot'
 apply plugin: 'io.spring.dependency-management'
 
@@ -13,16 +16,27 @@ buildscript {
 }
 
 apply plugin: 'java'
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-apply plugin: 'war'
-war {
+jar {
     baseName = 'gateway'
 }
 
 repositories {
     mavenCentral()
+}
+
+sourceSets {
+    itest {
+        java.srcDir file('src/itest/java')
+        resources.srcDir file('src/main/resources')
+
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+    }
+}
+
+configurations {
+    itestCompile.extendsFrom testCompile
+    itestRuntime.extendsFrom testRuntime
 }
 
 dependencies {
@@ -47,4 +61,10 @@ dependencies {
 
 configurations {
     compile.exclude module: 'spring-boot-starter-tomcat'
+}
+
+task itest (type:Test) {
+    testClassesDir = sourceSets.itest.output.classesDir
+    classpath = sourceSets.itest.runtimeClasspath
+    outputs.upToDateWhen { false }
 }
